@@ -76,10 +76,12 @@ var Control = /** @class */ (function () {
         var usd = document.createElement("input");
         usd.placeholder = "Сумма(USD)";
         usd.className = "usd-total";
+        usd.type = 'number';
         wrapper.appendChild(usd);
         var uah = document.createElement("input");
         uah.placeholder = "Сумма(UAH)";
         uah.className = "uah-total";
+        uah.type = 'number';
         wrapper.appendChild(uah);
         var remove = document.createElement("i");
         remove.className = "fa fa-trash";

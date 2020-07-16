@@ -372,14 +372,14 @@ class Telegram
         var settings = {
             "async": true,
             "crossDomain": true,
-            "url": "https://api.telegram.org/" + "bot1307082658:AAGLKXu6heui6HRtYeifyT-sj8o0_X8OhgE" + "/sendMessage",
+            "url": "https://api.telegram.org/" + "" + "/sendMessage",
             "method": "POST",
             "headers": {
               "Content-Type": "application/json",
               "cache-control": "no-cache"
             },
             "data": JSON.stringify({
-              "chat_id": '196832042',
+              "chat_id": '',
               "text": this.collectMessage()
             })
           }

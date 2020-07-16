@@ -22,13 +22,6 @@ class Control
             var elems = document.querySelectorAll('.tooltipped');
             var instances = M.Tooltip.init(elems, {});
           });
-        
-          // Or with jQuery
-        
-          $(document).ready(function(){
-            $('.tooltipped').tooltip();
-          });
-                
     }
 
     createDateInput(): void

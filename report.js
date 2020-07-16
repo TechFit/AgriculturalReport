@@ -19,10 +19,6 @@ var Control = /** @class */ (function () {
             var elems = document.querySelectorAll('.tooltipped');
             var instances = M.Tooltip.init(elems, {});
         });
-        // Or with jQuery
-        $(document).ready(function () {
-            $('.tooltipped').tooltip();
-        });
     }
     Control.prototype.createDateInput = function () {
         var wrapper = document.createElement("div");

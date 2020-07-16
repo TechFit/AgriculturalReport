@@ -15,6 +15,7 @@ class Control
         this.createDateInput();
         this.createBalanceInput();
         this.createCurrencyInput();
+        this.createRefillButton();
         this.createPurchaseButton();
         this.createSendToTelegramButton();
         this.createResultField();
@@ -113,22 +114,43 @@ class Control
     {
         const wrapper = document.createElement("div");
         wrapper.id = this.PURCHASE;
-        wrapper.className = 'col s4';
+        wrapper.className = 'col s1';
 
         const button = document.createElement("button");
         button.id = this.PURCHASE_BUTTON_ID;
-        button.innerText = "Додати запис"
         button.disabled = true;
-        button.className = "waves-effect waves-light btn-large green"
+        button.className = "btn-floating waves-effect waves-light btn-large red tooltipped";
+        button.setAttribute('data-position', "bottom");
+        button.setAttribute('data-tooltip', "Витрата коштів");
 
         wrapper.appendChild(button);
         document.getElementById(this.CONTENT_ID).appendChild(wrapper); 
+        $("#purchaseBtn").append("<i class='material-icons'>remove</i>");
     }
 
-    createPurchaseRow()
+    createRefillButton()
     {
         const wrapper = document.createElement("div");
-        wrapper.className = `row ${this.PURCHASE_ROW_CLASS}`;
+        wrapper.id = 'refill';
+        wrapper.className = 'col s1';
+
+        const button = document.createElement("button");
+        button.id = 'refill-button';
+        button.disabled = true;
+        button.className = "btn-floating waves-effect waves-light btn-large green tooltipped";
+        button.setAttribute('data-position', "left");
+        button.setAttribute('data-tooltip', "Поповнення коштів");
+
+        wrapper.appendChild(button);
+        document.getElementById(this.CONTENT_ID).appendChild(wrapper); 
+        $("#refill-button").append("<i class='material-icons'>add</i>");
+    }
+
+    createPurchaseRow(type: string)
+    {
+        const wrapper = document.createElement("div");
+        wrapper.className = `row ${this.PURCHASE_ROW_CLASS} ${type}`; 
+        wrapper.setAttribute('data-type', type);
 
         const descriptionWrapper = document.createElement("div");
         descriptionWrapper.className = 'col s7 input-field';
@@ -140,7 +162,11 @@ class Control
         description.type = 'text';
         const labelDescription = document.createElement("label");
         labelDescription.htmlFor = descriptionId;
-        labelDescription.textContent = "Опис витрати";
+        if (type === 'refill') {
+            labelDescription.textContent = "Опис поповнення";
+        } else {
+            labelDescription.textContent = "Опис витрати";
+        }
         descriptionWrapper.appendChild(description);
         descriptionWrapper.appendChild(labelDescription);
         wrapper.appendChild(descriptionWrapper);
@@ -171,23 +197,23 @@ class Control
         removeWrapper.appendChild(remove);
         wrapper.appendChild(removeWrapper);
 
-        document.getElementById(this.CONTENT_ID).insertBefore(wrapper, document.getElementById(this.PURCHASE)); 
+        document.getElementById(this.CONTENT_ID).insertBefore(wrapper, document.getElementById('refill')); 
     }
 
     createSendToTelegramButton()
     {
         const wrapper = document.createElement("div");
         wrapper.id = 'telegram';
-        wrapper.className = 'col s5';
+        wrapper.className = 'col s1';
 
         const button = document.createElement("button");
-        button.innerText = "Надіслати в Telegram";
         button.id = 'sendToTelegram';
-        button.className = "btn btn-large btn-success tooltipped"
+        button.className = "btn-floating btn btn-large btn-success tooltipped"
         button.setAttribute('data-position', "right");
-        button.setAttribute('data-tooltip', "Звіт буде відправлено в телеграм.");
+        button.setAttribute('data-tooltip', "Надіслати звіт в Telegram.");
         wrapper.appendChild(button);
         document.getElementById(this.CONTENT_ID).appendChild(wrapper); 
+        $("#sendToTelegram").append("<i class='material-icons'>send</i>");
     }
 }
 
@@ -206,7 +232,9 @@ class Handler
     purchaseButtonOnClick(): void
     {
         const purchaseBtn = document.getElementById(control.PURCHASE_BUTTON_ID);
-        purchaseBtn.addEventListener("click", (e:Event) => control.createPurchaseRow());
+        purchaseBtn.addEventListener("click", (e:Event) => control.createPurchaseRow('purchase'));
+        const refillBtn = document.getElementById('refill-button');
+        refillBtn.addEventListener("click", (e:Event) => control.createPurchaseRow('refill'));
     }
 
     eventListener(): void
@@ -228,14 +256,17 @@ class Handler
         const balanceInput = document.getElementById(control.BALANCE_INPUT).value;
         const currencyInput = document.getElementById(control.CURRENCY_INPUT).value;
         const purchaseBtn = document.getElementById(control.PURCHASE_BUTTON_ID);
+        const refillBtn = document.getElementById('refill-button');
 
         if (balanceInput === null || 
             balanceInput === "" || 
             currencyInput === null || 
             currencyInput === "") {
             purchaseBtn.disabled = true;
+            refillBtn.disabled = true;
         } else {
             purchaseBtn.disabled = false;
+            refillBtn.disabled = false;
         }
     }
 }
@@ -277,17 +308,26 @@ class Calculator
     totalAmount()
     {
         let total = 0;
+        let purchaseValue = 0;
+        let refillValue = 0;
         let purchaseRows = document.getElementsByClassName('usd-total');
         for (let i = 0; i < purchaseRows.length; i++) {       
-            let purchase = parseFloat(purchaseRows[i].value) || 0;
-            total =  Math.round(((purchase + total) + Number.EPSILON) * 100) / 100;
+            let type = purchaseRows[i].parentElement.parentElement.getAttribute('data-type');
+            let value = parseFloat(purchaseRows[i].value) || 0;
+            if (type === 'refill') {
+                refillValue = Math.round(((value + refillValue) + Number.EPSILON) * 100) / 100;
+            } else {
+                purchaseValue =  Math.round(((value + purchaseValue) + Number.EPSILON) * 100) / 100;
+            }
         }
 
-        let totalAmout = 0;
         let balanceInput = document.getElementById('balanceInput').value;
 
-        document.getElementById('total-purchase').textContent = total;
-        document.getElementById('total-amount').textContent = Math.round(((balanceInput - total) + Number.EPSILON) * 100) / 100;
+        document.getElementById('total-purchase').textContent = purchaseValue;
+        let totalAmount = 0;
+        totalAmount = Math.round(((balanceInput - purchaseValue) + Number.EPSILON) * 100) / 100;
+        totalAmount = Math.round(((totalAmount + refillValue) + Number.EPSILON) * 100) / 100;
+        document.getElementById('total-amount').textContent = totalAmount;
     }
 
     convertMoney(e: Event)
@@ -343,6 +383,13 @@ class Telegram
         message += "Попередній залишок " + startBalance + "$ \n\n";
         let rows = document.querySelectorAll('div.purchaseRow');
         for (let i = 0; i < rows.length; i++) {     
+
+            let type = rows[i].getAttribute('data-type');
+            if (type === 'refill') {
+                message += '+ ';
+            } else {
+                message += '- ';
+            }
             const description = rows[i].querySelector('input.description').value;  
             const usdTotal = rows[i].querySelector('input.usd-total').value + "$";
             if (description !== "" && usdTotal !== "") {

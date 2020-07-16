@@ -12,6 +12,7 @@ var Control = /** @class */ (function () {
         this.createDateInput();
         this.createBalanceInput();
         this.createCurrencyInput();
+        this.createRefillButton();
         this.createPurchaseButton();
         this.createSendToTelegramButton();
         this.createResultField();
@@ -84,18 +85,35 @@ var Control = /** @class */ (function () {
     Control.prototype.createPurchaseButton = function () {
         var wrapper = document.createElement("div");
         wrapper.id = this.PURCHASE;
-        wrapper.className = 'col s4';
+        wrapper.className = 'col s1';
         var button = document.createElement("button");
         button.id = this.PURCHASE_BUTTON_ID;
-        button.innerText = "Додати запис";
         button.disabled = true;
-        button.className = "waves-effect waves-light btn-large green";
+        button.className = "btn-floating waves-effect waves-light btn-large red tooltipped";
+        button.setAttribute('data-position', "bottom");
+        button.setAttribute('data-tooltip', "Витрата коштів");
         wrapper.appendChild(button);
         document.getElementById(this.CONTENT_ID).appendChild(wrapper);
+        $("#purchaseBtn").append("<i class='material-icons'>remove</i>");
     };
-    Control.prototype.createPurchaseRow = function () {
+    Control.prototype.createRefillButton = function () {
         var wrapper = document.createElement("div");
-        wrapper.className = "row " + this.PURCHASE_ROW_CLASS;
+        wrapper.id = 'refill';
+        wrapper.className = 'col s1';
+        var button = document.createElement("button");
+        button.id = 'refill-button';
+        button.disabled = true;
+        button.className = "btn-floating waves-effect waves-light btn-large green tooltipped";
+        button.setAttribute('data-position', "left");
+        button.setAttribute('data-tooltip', "Поповнення коштів");
+        wrapper.appendChild(button);
+        document.getElementById(this.CONTENT_ID).appendChild(wrapper);
+        $("#refill-button").append("<i class='material-icons'>add</i>");
+    };
+    Control.prototype.createPurchaseRow = function (type) {
+        var wrapper = document.createElement("div");
+        wrapper.className = "row " + this.PURCHASE_ROW_CLASS + " " + type;
+        wrapper.setAttribute('data-type', type);
         var descriptionWrapper = document.createElement("div");
         descriptionWrapper.className = 'col s7 input-field';
         var description = document.createElement("input");
@@ -105,7 +123,12 @@ var Control = /** @class */ (function () {
         description.type = 'text';
         var labelDescription = document.createElement("label");
         labelDescription.htmlFor = descriptionId;
-        labelDescription.textContent = "Опис витрати";
+        if (type === 'refill') {
+            labelDescription.textContent = "Опис поповнення";
+        }
+        else {
+            labelDescription.textContent = "Опис витрати";
+        }
         descriptionWrapper.appendChild(description);
         descriptionWrapper.appendChild(labelDescription);
         wrapper.appendChild(descriptionWrapper);
@@ -132,20 +155,20 @@ var Control = /** @class */ (function () {
         remove.textContent = 'clear';
         removeWrapper.appendChild(remove);
         wrapper.appendChild(removeWrapper);
-        document.getElementById(this.CONTENT_ID).insertBefore(wrapper, document.getElementById(this.PURCHASE));
+        document.getElementById(this.CONTENT_ID).insertBefore(wrapper, document.getElementById('refill'));
     };
     Control.prototype.createSendToTelegramButton = function () {
         var wrapper = document.createElement("div");
         wrapper.id = 'telegram';
-        wrapper.className = 'col s5';
+        wrapper.className = 'col s1';
         var button = document.createElement("button");
-        button.innerText = "Надіслати в Telegram";
         button.id = 'sendToTelegram';
-        button.className = "btn btn-large btn-success tooltipped";
+        button.className = "btn-floating btn btn-large btn-success tooltipped";
         button.setAttribute('data-position', "right");
-        button.setAttribute('data-tooltip', "Звіт буде відправлено в телеграм.");
+        button.setAttribute('data-tooltip', "Надіслати звіт в Telegram.");
         wrapper.appendChild(button);
         document.getElementById(this.CONTENT_ID).appendChild(wrapper);
+        $("#sendToTelegram").append("<i class='material-icons'>send</i>");
     };
     return Control;
 }());
@@ -158,7 +181,9 @@ var Handler = /** @class */ (function () {
     }
     Handler.prototype.purchaseButtonOnClick = function () {
         var purchaseBtn = document.getElementById(control.PURCHASE_BUTTON_ID);
-        purchaseBtn.addEventListener("click", function (e) { return control.createPurchaseRow(); });
+        purchaseBtn.addEventListener("click", function (e) { return control.createPurchaseRow('purchase'); });
+        var refillBtn = document.getElementById('refill-button');
+        refillBtn.addEventListener("click", function (e) { return control.createPurchaseRow('refill'); });
     };
     Handler.prototype.eventListener = function () {
         var _this = this;
@@ -175,14 +200,17 @@ var Handler = /** @class */ (function () {
         var balanceInput = document.getElementById(control.BALANCE_INPUT).value;
         var currencyInput = document.getElementById(control.CURRENCY_INPUT).value;
         var purchaseBtn = document.getElementById(control.PURCHASE_BUTTON_ID);
+        var refillBtn = document.getElementById('refill-button');
         if (balanceInput === null ||
             balanceInput === "" ||
             currencyInput === null ||
             currencyInput === "") {
             purchaseBtn.disabled = true;
+            refillBtn.disabled = true;
         }
         else {
             purchaseBtn.disabled = false;
+            refillBtn.disabled = false;
         }
     };
     return Handler;
@@ -215,15 +243,25 @@ var Calculator = /** @class */ (function () {
     };
     Calculator.prototype.totalAmount = function () {
         var total = 0;
+        var purchaseValue = 0;
+        var refillValue = 0;
         var purchaseRows = document.getElementsByClassName('usd-total');
         for (var i = 0; i < purchaseRows.length; i++) {
-            var purchase = parseFloat(purchaseRows[i].value) || 0;
-            total = Math.round(((purchase + total) + Number.EPSILON) * 100) / 100;
+            var type = purchaseRows[i].parentElement.parentElement.getAttribute('data-type');
+            var value = parseFloat(purchaseRows[i].value) || 0;
+            if (type === 'refill') {
+                refillValue = Math.round(((value + refillValue) + Number.EPSILON) * 100) / 100;
+            }
+            else {
+                purchaseValue = Math.round(((value + purchaseValue) + Number.EPSILON) * 100) / 100;
+            }
         }
-        var totalAmout = 0;
         var balanceInput = document.getElementById('balanceInput').value;
-        document.getElementById('total-purchase').textContent = total;
-        document.getElementById('total-amount').textContent = Math.round(((balanceInput - total) + Number.EPSILON) * 100) / 100;
+        document.getElementById('total-purchase').textContent = purchaseValue;
+        var totalAmount = 0;
+        totalAmount = Math.round(((balanceInput - purchaseValue) + Number.EPSILON) * 100) / 100;
+        totalAmount = Math.round(((totalAmount + refillValue) + Number.EPSILON) * 100) / 100;
+        document.getElementById('total-amount').textContent = totalAmount;
     };
     Calculator.prototype.convertMoney = function (e) {
         var usdInput = e.path[2].childNodes[1].childNodes[0];
@@ -270,6 +308,13 @@ var Telegram = /** @class */ (function () {
         message += "Попередній залишок " + startBalance + "$ \n\n";
         var rows = document.querySelectorAll('div.purchaseRow');
         for (var i = 0; i < rows.length; i++) {
+            var type = rows[i].getAttribute('data-type');
+            if (type === 'refill') {
+                message += '+ ';
+            }
+            else {
+                message += '- ';
+            }
             var description = rows[i].querySelector('input.description').value;
             var usdTotal = rows[i].querySelector('input.usd-total').value + "$";
             if (description !== "" && usdTotal !== "") {
